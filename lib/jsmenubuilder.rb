@@ -67,6 +67,8 @@ function openTab(evt, tabName) {
   evt.currentTarget.className += " active";
 }
 
+// Get the element with id="defaultOpen" and click on it
+document.getElementById("defaultOpen").click();
 EOF
 
 
@@ -122,8 +124,18 @@ EOF
   
   private
 
-  def tabs(options={})
+  def tabs(opt={})
 
+    options = {active: '1'}.merge(opt)
+
+    tabs = if options[:headings] then
+      headings = options[:headings]
+      headings.zip(headings.map {|heading| ['h3', {}, heading]}).to_h
+    else
+      options[:tabs]
+    end
+                             
+                         
     ## build the HTML
 
     a = RexleBuilder.build do |xml|
@@ -131,7 +143,7 @@ EOF
 
         xml.comment!(' Tab links ')
         xml.div(class: 'tab' ) do
-          options[:headings].each do |heading|
+          tabs.keys.each do |heading|
             xml.button({class:'tablinks', 
                         onclick: %Q(openTab(event, "#{heading}"))}, heading)
           end
@@ -139,15 +151,19 @@ EOF
 
         xml.comment!(' Tab content ')
 
-        options[:headings].each do |heading|
-          xml.div(id: heading, class: 'tabcontent' ) do
-            xml.h3 heading
-          end
+        tabs.each do |heading, content|
+          puts 'content: ' + content.inspect
+          xml.div({id: heading, class: 'tabcontent'}, content )
         end
       end
     end
 
-    @html = Rexle.new(a).xml(pretty: true, declaration: false)\
+    doc = Rexle.new(a)
+ 
+    e = doc.root.element("div/button[#{options[:active]}]")
+    e.attributes[:id] = 'defaultOpen' if e
+
+    @html = doc.xml(pretty: true, declaration: false)\
       .gsub(/<\/div>/,'\0' + "\n").strip.lines[1..-2]\
       .map {|x| x.sub(/^  /,'') }.join
     
