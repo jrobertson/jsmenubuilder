@@ -71,6 +71,70 @@ function openTab(evt, tabName) {
 document.getElementById("defaultOpen").click();
 EOF
 
+FULL_PAGE_TABS_CSS =<<EOF
+/* Set height of body and the document to 100% to enable "full page tabs" */
+body, html {
+  height: 100%;
+  margin: 0;
+  font-family: Arial;
+}
+
+/* Style tab links */
+.tablink {
+  background-color: #555;
+  color: white;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  font-size: 17px;
+  width: 25%;
+}
+
+button.active {
+  background-color: #c55;
+}
+
+.tablink:hover {
+  background-color: #777;
+}
+
+
+
+/* Style the tab content (and add height:100% for full page content) */
+.tabcontent {
+  color: #000;
+  display: none;
+  padding: 100px 20px;
+  height: 100%;
+}
+
+EOF
+
+FULL_PAGE_TABS_JS =<<EOF
+function openPage(pageName,elmnt) {
+  var i, tabcontent;
+  tabcontent = document.getElementsByClassName("tabcontent");
+  for (i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
+  }
+
+  // Get all elements with class="tablink" and remove the class "active"
+  tablink = document.getElementsByClassName("tablink");
+  for (i = 0; i < tablink.length; i++) {
+    tablink[i].className = tablink[i].className.replace(" active", "");
+  }
+
+
+  document.getElementById(pageName).style.display = "block";
+  elmnt.className += " active";
+}
+
+// Get the element with id="defaultOpen" and click on it
+document.getElementById("defaultOpen").click();
+EOF
+
 
 
   attr_reader :html, :css, :js
@@ -78,8 +142,14 @@ EOF
   def initialize(type, options={})
 
     @type = type
-    types = %i(tabs)
-    method(type.to_sym).call(options) if types.include? type
+    types = %i(tabs full_page_tabs)
+    doc = method(type.to_sym).call(options) if types.include? type
+    @html = doc.xml(pretty: true, declaration: false)\
+      .gsub(/<\/div>/,'\0' + "\n").strip.lines[1..-2]\
+      .map {|x| x.sub(/^  /,'') }.join
+    
+    @css = Object.const_get 'JsMenuBuilder::' + @type.to_s.upcase + '_CSS'
+    @js = Object.const_get 'JsMenuBuilder::' + @type.to_s.upcase + '_JS'
 
   end
   
@@ -163,13 +233,47 @@ EOF
     e = doc.root.element("div/button[#{options[:active]}]")
     e.attributes[:id] = 'defaultOpen' if e
 
-    @html = doc.xml(pretty: true, declaration: false)\
-      .gsub(/<\/div>/,'\0' + "\n").strip.lines[1..-2]\
-      .map {|x| x.sub(/^  /,'') }.join
-    
-    @css = Object.const_get 'JsMenuBuilder::' + @type.to_s.upcase + '_CSS'
-    @js = Object.const_get 'JsMenuBuilder::' + @type.to_s.upcase + '_JS'
+    return doc
+
+  end
+  
+  def full_page_tabs(opt={})
+
+    options = {active: '1'}.merge(opt)
+
+    tabs = if options[:headings] then
+      headings = options[:headings]
+      headings.zip(headings.map {|heading| ['h3', {}, heading]}).to_h
+    else
+      options[:tabs]
+    end
+                             
+                         
+    ## build the HTML
+
+    a = RexleBuilder.build do |xml|
+      xml.html do 
+
+        tabs.keys.each do |heading|
+          xml.button({class:'tablink', 
+                      onclick: %Q(openPage("#{heading}", this))}, heading)
+        end
+
+        tabs.each do |heading, content|
+          puts 'content: ' + content.inspect
+          xml.div({id: heading, class: 'tabcontent'}, content )
+        end
+      end
+    end
+
+    doc = Rexle.new(a)
+ 
+    e = doc.root.element("button[#{options[:active]}]")
+    e.attributes[:id] = 'defaultOpen' if e
+
+    return doc
+
     
   end
-
+  
 end
