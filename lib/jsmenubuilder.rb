@@ -6,6 +6,7 @@ require 'rexle'
 require 'rexle-builder'
 
 class JsMenuBuilder
+  using ColouredText
 
 TABS_CSS =<<EOF
 /* Style the tab */
@@ -139,18 +140,45 @@ EOF
 
   attr_reader :html, :css, :js
 
-  def initialize(type, options={})
-
-    @type = type
-    types = %i(tabs full_page_tabs)
-    doc = method(type.to_sym).call(options) if types.include? type
-    @html = doc.xml(pretty: true, declaration: false)\
-      .gsub(/<\/div>/,'\0' + "\n").strip.lines[1..-2]\
-      .map {|x| x.sub(/^  /,'') }.join
+  def initialize(unknown=nil, options={})
     
-    @css = Object.const_get 'JsMenuBuilder::' + @type.to_s.upcase + '_CSS'
-    @js = Object.const_get 'JsMenuBuilder::' + @type.to_s.upcase + '_JS'
+    if unknown.is_a? String then
+      type = unknown
+    else
+      options = unknown
+    end
+    
+    @debug = options[:debug]
 
+    @types = %i(tabs full_page_tabs)
+    
+    build(type, options) if type
+
+  end
+  
+  def import(xml)
+    
+    puts 'inside import'.info if @debug
+    doc = Rexle.new(xml)
+    type = doc.root.attributes[:mode]
+    type = 'full_page_tabs' if type == 'fullpage'
+    
+    tabs = doc.root.xpath('tab').inject({}) do |r, tab|
+      r.merge(tab.attributes[:title] => tab.children.join.strip)
+    end
+    
+    e = doc.root.element('tab[@mode="active"]')
+    
+    default_tab = if e then
+      title = e.attributes[:title]
+      (tabs.keys.index(title) + 1).to_s
+    else
+      '1'
+    end
+
+    h = { active: default_tab, tabs: tabs}
+    build(type, h)
+    
   end
   
   def to_css()
@@ -193,6 +221,24 @@ EOF
   end
   
   private
+  
+  def build(type, options)
+    
+    puts 'inside build'.info if @debug
+    puts "type: %s\noptions: %s".debug % [type, options] if @debug
+    
+    return unless @types.include? type.to_sym
+    
+    doc = method(type.to_sym).call(options)
+    
+    @html = doc.xml(pretty: true, declaration: false)\
+      .gsub(/<\/div>/,'\0' + "\n").strip.lines[1..-2]\
+      .map {|x| x.sub(/^  /,'') }.join
+    
+    @css = Object.const_get 'JsMenuBuilder::' + type.to_s.upcase + '_CSS'
+    @js = Object.const_get 'JsMenuBuilder::' + type.to_s.upcase + '_JS'    
+    
+  end
 
   def tabs(opt={})
 
@@ -204,9 +250,6 @@ EOF
     else
       options[:tabs]
     end
-                             
-                         
-    ## build the HTML
 
     a = RexleBuilder.build do |xml|
       xml.html do 
@@ -246,10 +289,7 @@ EOF
       headings.zip(headings.map {|heading| ['h3', {}, heading]}).to_h
     else
       options[:tabs]
-    end
-                             
-                         
-    ## build the HTML
+    end                                                     
 
     a = RexleBuilder.build do |xml|
       xml.html do 
@@ -276,4 +316,5 @@ EOF
     
   end
   
+
 end
