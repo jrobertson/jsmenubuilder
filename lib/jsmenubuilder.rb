@@ -144,7 +144,7 @@ EOF
     
     if unknown.is_a? String then
       type = unknown
-    else
+    elsif unknown.is_a? Hash
       options = unknown
     end
     
@@ -161,7 +161,12 @@ EOF
     puts 'inside import'.info if @debug
     doc = Rexle.new(xml)
     type = doc.root.attributes[:mode]
-    type = 'full_page_tabs' if type == 'fullpage'
+    
+    type = if type == 'fullpage' then
+    'full_page_tabs'
+    elsif type.nil?
+      doc.root.name unless type
+    end
     
     tabs = doc.root.xpath('tab').inject({}) do |r, tab|
       r.merge(tab.attributes[:title] => tab.children.join.strip)
@@ -178,6 +183,7 @@ EOF
 
     h = { active: default_tab, tabs: tabs}
     build(type, h)
+    self
     
   end
   
