@@ -142,8 +142,8 @@ EOF
 
   def initialize(unknown=nil, options={})
     
-    if unknown.is_a? String then
-      type = unknown
+    if unknown.is_a? String or unknown.is_a? Symbol then
+      type = unknown.to_sym
     elsif unknown.is_a? Hash
       options = unknown
     end
@@ -226,12 +226,19 @@ EOF
     
   end
   
+  def to_xml()
+    @xml
+  end
+  
+  
   private
   
   def build(type, options)
     
     puts 'inside build'.info if @debug
     puts "type: %s\noptions: %s".debug % [type, options] if @debug
+    
+    type = :full_page_tabs if type.to_sym == :fullpage
     
     return unless @types.include? type.to_sym
     
@@ -244,7 +251,39 @@ EOF
     @css = Object.const_get 'JsMenuBuilder::' + type.to_s.upcase + '_CSS'
     @js = Object.const_get 'JsMenuBuilder::' + type.to_s.upcase + '_JS'    
     
+    @xml = build_xml(type.to_sym, options)
+    
   end
+  
+  def build_xml(type, opt={})
+
+    puts 'inside build_xml'.info if @debug
+    
+    options = {active: '1'}.merge(opt)
+
+    tabs = if options[:headings] then
+      headings = options[:headings]
+      headings.zip(headings.map {|heading| ['h3', {}, heading]}).to_h
+    else
+      options[:tabs]
+    end
+
+    a = RexleBuilder.build do |xml|
+      xml.tags({mode: type}) do 
+        tabs.each do |heading, content|
+          xml.tag({title: heading}, content )
+        end
+      end
+    end
+
+    doc = Rexle.new(a)
+ 
+    e = doc.root.element("tag[#{options[:active]}]")
+    e.attributes[:mode] = 'active' if e
+
+    return doc.xml(pretty: true)
+
+  end  
 
   def tabs(opt={})
 
@@ -264,7 +303,7 @@ EOF
         xml.div(class: 'tab' ) do
           tabs.keys.each do |heading|
             xml.button({class:'tablinks', 
-                        onclick: %Q(openTab(event, "#{heading}"))}, heading)
+                        onclick: %Q(openTab(event, "#{heading}"))}, heading.to_s)
           end
         end
 
@@ -302,7 +341,7 @@ EOF
 
         tabs.keys.each do |heading|
           xml.button({class:'tablink', 
-                      onclick: %Q(openPage("#{heading}", this))}, heading)
+                      onclick: %Q(openPage("#{heading}", this))}, heading.to_s)
         end
 
         tabs.each do |heading, content|
@@ -321,6 +360,6 @@ EOF
 
     
   end
-  
+
 
 end
