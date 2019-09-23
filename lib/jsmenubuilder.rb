@@ -113,6 +113,45 @@ button.active {
 
 EOF
 
+ACCORDION_CSS = %q(
+.accordion {
+  background-color: #eee;
+  color: #444;
+  cursor: pointer;
+  padding: 18px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 15px;
+  transition: 0.4s;
+}
+
+.active, .accordion:hover {
+  background-color: #ccc;
+}
+
+.accordion:after {
+  content: '\002B';
+  color: #777;
+  font-weight: bold;
+  float: right;
+  margin-left: 5px;
+}
+
+.active:after {
+  content: "\2212";
+}
+
+.panel {
+  padding: 0 18px;
+  background-color: white;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease-out;
+}
+)
+
 FULL_PAGE_TABS_JS =<<EOF
 function openPage(pageName,elmnt) {
   var i, tabcontent;
@@ -136,6 +175,23 @@ function openPage(pageName,elmnt) {
 document.getElementById("defaultOpen").click();
 EOF
 
+ACCORDION_JS =<<EOF
+var acc = document.getElementsByClassName("accordion");
+var i;
+
+for (i = 0; i < acc.length; i++) {
+  acc[i].addEventListener("click", function() {
+    this.classList.toggle("active");
+    var panel = this.nextElementSibling;
+    if (panel.style.maxHeight){
+      panel.style.maxHeight = null;
+    } else {
+      panel.style.maxHeight = panel.scrollHeight + "px";
+    } 
+  });
+}
+
+EOF
 
 
   attr_reader :html, :css, :js
@@ -150,7 +206,7 @@ EOF
     
     @debug = options[:debug]
 
-    @types = %i(tabs full_page_tabs)
+    @types = %i(tabs full_page_tabs accordion)
     
     build(type, options) if type
 
@@ -243,13 +299,14 @@ EOF
     return unless @types.include? type.to_sym
     
     doc = method(type.to_sym).call(options)
+    puts 'doc: ' + doc.inspect if @debug
     
     @html = doc.xml(pretty: true, declaration: false)\
       .gsub(/<\/div>/,'\0' + "\n").strip.lines[1..-2]\
       .map {|x| x.sub(/^  /,'') }.join
     
-    @css = Object.const_get 'JsMenuBuilder::' + type.to_s.upcase + '_CSS'
-    @js = Object.const_get 'JsMenuBuilder::' + type.to_s.upcase + '_JS'    
+    @css = Object.const_get self.class.to_s + '::' + type.to_s.upcase + '_CSS'
+    @js = Object.const_get self.class.to_s + '::' + type.to_s.upcase + '_JS'    
     
     @xml = build_xml(type.to_sym, options)
     
@@ -258,19 +315,26 @@ EOF
   def build_xml(type, opt={})
 
     puts 'inside build_xml'.info if @debug
+    puts 'type: ' + type.inspect if @debug
     
-    options = {active: '1'}.merge(opt)
+    options = if type.to_s =~ /tabs\b/ then
+      {active: '1'}.merge(opt)
+    else
+      opt
+    end    
 
-    tabs = if options[:headings] then
+    entries = if options[:headings] then
       headings = options[:headings]
       headings.zip(headings.map {|heading| ['h3', {}, heading]}).to_h
     else
-      options[:tabs]
+      options[type.to_sym]
     end
+    
+    puts 'entries: ' + entries.inspect if @debug
 
     a = RexleBuilder.build do |xml|
       xml.tags({mode: type}) do 
-        tabs.each do |heading, content|
+        entries.each do |heading, content|
           xml.tag({title: heading}, content )
         end
       end
@@ -278,8 +342,10 @@ EOF
 
     doc = Rexle.new(a)
  
-    e = doc.root.element("tag[#{options[:active]}]")
-    e.attributes[:mode] = 'active' if e
+    if options[:active] then
+      e = doc.root.element("tag[#{options[:active]}]")
+      e.attributes[:mode] = 'active' if e
+    end
 
     return doc.xml(pretty: true)
 
@@ -361,5 +427,25 @@ EOF
     
   end
 
+  def accordion(opt={})
+
+    panels = opt[:accordion]
+
+
+    a = RexleBuilder.build do |xml|
+      xml.html do 
+
+        panels.each do |heading, inner_html|
+          xml.button({class:'accordion'}, heading.to_s)
+          xml.div({class:'panel'}, inner_html)
+        end
+
+      end
+    end
+
+    return Rexle.new(a)
+    
+  end
+  
 
 end
