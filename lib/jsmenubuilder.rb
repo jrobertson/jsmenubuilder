@@ -198,13 +198,25 @@ EOF
 
   def initialize(unknown=nil, options={})
     
-    if unknown.is_a? String or unknown.is_a? Symbol then
+    @debug = options[:debug]
+    puts 'options: ' + options.inspect if @debug    
+    
+    if unknown.is_a? Symbol
       type = unknown.to_sym
+      
+    elsif unknown.is_a? String then
+      
+      s, _ = RXFHelper.read unknown
+      if s =~ /^<tags/ then
+        options = parse_xml(s)
+        type = options.keys.first
+      else
+        type = unknown.to_sym
+      end
+
     elsif unknown.is_a? Hash
       options = unknown
-    end
-    
-    @debug = options[:debug]
+    end    
 
     @types = %i(tabs full_page_tabs accordion)
     
@@ -312,6 +324,18 @@ EOF
     
   end
   
+  def build_h(doc)
+    
+    puts 'inside build_h'.info if @debug
+    
+    h = doc.root.xpath('tag').inject({}) do |r,e|
+      r.merge(e.attributes[:title] => e.children.join.strip)
+    end
+    
+    {doc.root.attributes[:mode].to_s.to_sym => h}
+    
+  end  
+  
   def build_xml(type, opt={})
 
     puts 'inside build_xml'.info if @debug
@@ -350,6 +374,11 @@ EOF
     return doc.xml(pretty: true)
 
   end  
+  
+  def parse_xml(s)
+    doc = Rexle.new(s)
+    build_h(doc)
+  end
 
   def tabs(opt={})
 
