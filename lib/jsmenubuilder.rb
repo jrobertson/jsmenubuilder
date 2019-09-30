@@ -185,8 +185,12 @@ for (i = 0; i < acc.length; i++) {
     var panel = this.nextElementSibling;
     if (panel.style.maxHeight){
       panel.style.maxHeight = null;
-    } else {
+    }                                               
+    else {
       panel.style.maxHeight = panel.scrollHeight + "px";
+      e = panel.children[0]
+      if (e)
+        e.click()            
     } 
   });
 }
@@ -332,6 +336,8 @@ EOF
       r.merge(e.attributes[:title] => e.children.join.strip)
     end
     
+    puts ('build_h: ' + h.inspect).debug if @debug
+    
     {doc.root.attributes[:mode].to_s.to_sym => h}
     
   end  
@@ -459,12 +465,13 @@ EOF
   def accordion(opt={})
 
     panels = opt[:accordion]
-
+    debug = @debug
 
     a = RexleBuilder.build do |xml|
       xml.html do 
 
         panels.each do |heading, inner_html|
+          puts 'inner_html: ' + inner_html.inspect if debug
           xml.button({class:'accordion'}, heading.to_s)
           xml.div({class:'panel'}, inner_html)
         end
@@ -472,7 +479,9 @@ EOF
       end
     end
 
-    return Rexle.new(a)
+    doc = Rexle.new(a)
+    puts 'doc: ' + doc.xml.inspect if @debug
+    return doc
     
   end
   
