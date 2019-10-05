@@ -183,12 +183,20 @@ for (i = 0; i < acc.length; i++) {
   acc[i].addEventListener("click", function() {
     this.classList.toggle("active");
     var panel = this.nextElementSibling;
+    e = panel.children[0];
+
     if (panel.style.maxHeight){
       panel.style.maxHeight = null;
+                              
+      if (e) {
+                              
+        let event = new Event("dblclick");
+        e.dispatchEvent(event);                              
+
+      }
     }                                               
     else {
       panel.style.maxHeight = panel.scrollHeight + "px";
-      e = panel.children[0]
       if (e)
         e.click()            
     } 
