@@ -188,7 +188,7 @@ for (i = 0; i < acc.length; i++) {
     if (panel.style.maxHeight){
       panel.style.maxHeight = null;
                               
-      if (e) {
+      if (e && e.tagName == 'INPUT' && e.type == 'hidden')  {
                               
         let event = new Event("dblclick");
         e.dispatchEvent(event);                              
@@ -197,7 +197,7 @@ for (i = 0; i < acc.length; i++) {
     }                                               
     else {
       panel.style.maxHeight = panel.scrollHeight + "px";
-      if (e)
+      if (e && e.tagName == 'INPUT' && e.type == 'hidden') 
         e.click()            
     } 
   });
