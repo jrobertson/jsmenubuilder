@@ -3,6 +3,7 @@
 # file: jsmenubuilder.rb
 
 require 'rexle'
+require 'rxfhelper'
 require 'rexle-builder'
 
 class JsMenuBuilder
