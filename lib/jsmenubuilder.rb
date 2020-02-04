@@ -481,6 +481,8 @@ EOF
 
         panels.each do |heading, inner_html|
           puts 'inner_html: ' + inner_html.inspect if debug
+          xml.a({name: heading.downcase.gsub(/\W/,'-').gsub(/-{2,}/,'-')\
+                 .gsub(/^-|-$/,'')})
           xml.button({class:'accordion'}, heading.to_s)
           xml.div({class:'panel'}, inner_html)
         end
