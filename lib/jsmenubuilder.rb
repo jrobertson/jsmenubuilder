@@ -115,6 +115,9 @@ button.active {
 EOF
 
 ACCORDION_CSS = %q(
+
+
+
 .accordion {
   background-color: #eee;
   color: #444;
@@ -152,6 +155,42 @@ ACCORDION_CSS = %q(
   transition: max-height 0.2s ease-out;
 }
 )
+
+STICKY_NAVBAR_CSS =<<EOF
+/* Style the navbar */
+#navbar {
+  overflow: hidden;
+  background-color: #333;
+}
+
+/* Navbar links */
+#navbar a {
+  float: left;
+  display: block;
+  color: #f2f2f2;
+  text-align: center;
+  padding: 14px;
+  text-decoration: none;
+}
+
+/* Page content */
+.content {
+  padding: 16px;
+}
+
+/* The sticky class is added to the navbar with JS when it reaches its scroll position */
+.sticky {
+  position: fixed;
+  top: 0;
+  width: 100%;
+}
+
+/* Add some top padding to the page content to prevent sudden quick movement (as the navigation bar gets a new position at the top of the page (position:fixed and top:0) */
+.sticky + .content {
+  padding-top: 60px;
+}
+
+EOF
 
 FULL_PAGE_TABS_JS =<<EOF
 function openPage(pageName,elmnt) {
@@ -206,6 +245,26 @@ for (i = 0; i < acc.length; i++) {
 
 EOF
 
+STICKY_NAVBAR_JS =<<EOF
+
+// When the user scrolls the page, execute myFunction 
+window.onscroll = function() {myFunction()};
+
+// Get the navbar
+var navbar = document.getElementById("navbar");
+
+// Get the offset position of the navbar
+var sticky = navbar.offsetTop;
+
+// Add the sticky class to the navbar when you reach its scroll position. Remove "sticky" when you leave the scroll position
+function myFunction() {
+  if (window.pageYOffset >= sticky) {
+    navbar.classList.add("sticky")
+  } else {
+    navbar.classList.remove("sticky");
+  }
+}
+EOF
 
   attr_reader :html, :css, :js
 
@@ -231,7 +290,7 @@ EOF
       options = unknown
     end    
 
-    @types = %i(tabs full_page_tabs accordion)
+    @types = %i(tabs full_page_tabs accordion sticky_navbar)
     
     build(type, options) if type
 
@@ -366,6 +425,7 @@ EOF
       headings = options[:headings]
       headings.zip(headings.map {|heading| ['h3', {}, heading]}).to_h
     else
+      return unless options.has_key?(type.to_sym)
       options[type.to_sym]
     end
     
@@ -473,18 +533,40 @@ EOF
 
   def accordion(opt={})
 
-    panels = opt[:accordion]
+    puts ('opt: ' + opt.inspect).debug if @debug
+    
+    panels = opt[:accordion]    
+
+    h = panels.group_by {|key, value| key.upcase[0]}
+
     debug = @debug
+    
+    puts ('panels: ' + panels.inspect).debug if @debug
 
     a = RexleBuilder.build do |xml|
-      xml.html do 
-
-        panels.each do |heading, inner_html|
-          puts 'inner_html: ' + inner_html.inspect if debug
-          xml.a({name: heading.downcase.gsub(/\W/,'-').gsub(/-{2,}/,'-')\
-                 .gsub(/^-|-$/,'')})
-          xml.button({class:'accordion'}, heading.to_s)
-          xml.div({class:'panel'}, inner_html)
+      
+      xml.html do
+        
+        xml.div(id: 'navbar') do
+          
+          h.each do |char, _|
+            xml.a({href: '#' + char.downcase}, char)
+          end
+          
+        end
+      
+        h.each do |char, rows|
+          
+          xml.h2({id: char.downcase}, char)
+          
+          rows.each do |heading, inner_html|
+            puts 'inner_html: ' + inner_html.inspect if debug
+            xml.a({name: heading.downcase.gsub(/\W/,'-').gsub(/-{2,}/,'-')\
+                  .gsub(/^-|-$/,'')})
+            xml.button({class:'accordion'}, heading.to_s)
+            xml.div({class:'panel'}, inner_html)
+            
+          end
         end
 
       end
@@ -496,5 +578,37 @@ EOF
     
   end
   
+  def sticky_navbar(opt={})
+
+
+    navhtml = if opt[:html] then
+    
+      opt[:html]
+      
+    elsif opt[:sticky_navbar]
+      
+      RexleBuilder.build do |xml|
+        
+        xml.html do
+          
+          xml.div(id: 'navbar') do
+            
+            h.each do |char, _|
+              xml.a({href: '#' + char.downcase}, char)
+            end
+            
+          end
+
+        end
+      end
+    end
+    
+    doc = Rexle.new(navhtml)
+    puts 'doc: ' + doc.xml.inspect if @debug           
+
+    return doc
+
+    
+  end  
 
 end
