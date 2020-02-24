@@ -545,7 +545,7 @@ EOF
     
     panels = opt[:accordion]    
 
-    @h = h = panels.group_by {|key, value| key.upcase[0]}    
+    @h = h = panels.group_by {|key, value| key.upcase[0]}
 
     debug = @debug
     
@@ -555,7 +555,7 @@ EOF
       
       xml.html do
               
-        h.each do |char, rows|
+        h.sort.each do |char, rows|
           
           xml.h2({id: char.downcase}, char)
           
