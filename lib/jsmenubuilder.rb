@@ -331,6 +331,10 @@ EOF
     @css
   end
   
+  def to_h()
+    @h
+  end
+  
   def to_html()
     @html
   end
@@ -341,25 +345,29 @@ EOF
   
   def to_webpage()
 
+    r = block_given? ? yield(@css, @html, @js) : @css, @html, @js
+    css, html, js = *r.flatten
+    puts 'css: ' + css.inspect if @debug
+    
     a = RexleBuilder.build do |xml|
       xml.html do 
         xml.head do
           xml.meta name: "viewport", content: \
               "width=device-width, initial-scale=1"
-          xml.style "\nbody {font-family: Arial;}\n\n" + @css
+          xml.style "\nbody {font-family: Arial;}\n\n" + css
         end
         xml.body
       end
     end
 
     doc = Rexle.new(a)
-    e = Rexle.new("<html>%s</html>" % @html).root
+    e = Rexle.new("<html>%s</html>" % html).root
     
     e.children.each {|child| doc.root.element('body').add child }
     
     doc.root.element('body').add \
         Rexle::Element.new('script').add_text "\n" + 
-        @js.gsub(/^ +\/\/[^\n]+\n/,'')
+        js.gsub(/^ +\/\/[^\n]+\n/,'')
     
     "<!DOCTYPE html>\n" + doc.xml(pretty: true, declaration: false)\
         .gsub(/<\/div>/,'\0' + "\n").gsub(/\n *<!--[^>]+>/,'')
@@ -537,7 +545,7 @@ EOF
     
     panels = opt[:accordion]    
 
-    h = panels.group_by {|key, value| key.upcase[0]}
+    @h = h = panels.group_by {|key, value| key.upcase[0]}    
 
     debug = @debug
     
@@ -546,15 +554,7 @@ EOF
     a = RexleBuilder.build do |xml|
       
       xml.html do
-        
-        xml.div(id: 'navbar') do
-          
-          h.each do |char, _|
-            xml.a({href: '#' + char.downcase}, char)
-          end
-          
-        end
-      
+              
         h.each do |char, rows|
           
           xml.h2({id: char.downcase}, char)
@@ -580,7 +580,8 @@ EOF
   
   def sticky_navbar(opt={})
 
-
+    puts 'inside sticky_navbar' if @debug
+    
     navhtml = if opt[:html] then
     
       opt[:html]
@@ -593,8 +594,8 @@ EOF
           
           xml.div(id: 'navbar') do
             
-            h.each do |char, _|
-              xml.a({href: '#' + char.downcase}, char)
+            opt[:sticky_navbar].each do |title, href|
+              xml.a({href: href}, title)
             end
             
           end
