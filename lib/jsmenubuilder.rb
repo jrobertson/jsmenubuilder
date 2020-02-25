@@ -6,6 +6,7 @@ require 'rexle'
 require 'rxfhelper'
 require 'rexle-builder'
 
+
 class JsMenuBuilder
   using ColouredText
 
@@ -188,6 +189,19 @@ STICKY_NAVBAR_CSS =<<EOF
 /* Add some top padding to the page content to prevent sudden quick movement (as the navigation bar gets a new position at the top of the page (position:fixed and top:0) */
 .sticky + .content {
   padding-top: 60px;
+}
+/* see https://stackoverflow.com/questions/10732690/offsetting-an-html-anchor-to-adjust-for-fixed-header */
+.anchor {
+  background-color: transparent;
+  padding-top: 70px;
+  margin-top: -70px;
+  display: block;
+}
+
+h2.anchor {
+  background-color: transparent; 
+  padding-top: 60px;
+  margin-top: 0px;
 }
 
 EOF
@@ -557,12 +571,12 @@ EOF
               
         h.sort.each do |char, rows|
           
-          xml.h2({id: char.downcase}, char)
+          xml.h2({class: 'anchor', id: char.downcase}, char)
           
           rows.each do |heading, inner_html|
             puts 'inner_html: ' + inner_html.inspect if debug
-            xml.a({name: heading.downcase.gsub(/\W/,'-').gsub(/-{2,}/,'-')\
-                  .gsub(/^-|-$/,'')})
+            xml.a({class: 'anchor', name: heading.downcase.gsub(/\W/,'-')\
+                   .gsub(/-{2,}/,'-').gsub(/^-|-$/,'')})
             xml.button({class:'accordion'}, heading.to_s)
             xml.div({class:'panel'}, inner_html)
             
