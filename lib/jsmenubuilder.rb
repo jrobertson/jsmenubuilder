@@ -423,7 +423,7 @@ EOF
     puts 'inside build_h'.info if @debug
     
     h = doc.root.xpath('tag').inject({}) do |r,e|
-      r.merge(e.attributes[:title] => e.children.join.strip)
+      r.merge(e.attributes[:title] => [e.children.join.strip, e.attributes[:class].join(' ')])
     end
     
     puts ('build_h: ' + h.inspect).debug if @debug
@@ -455,8 +455,9 @@ EOF
 
     a = RexleBuilder.build do |xml|
       xml.tags({mode: type}) do 
-        entries.each do |heading, content|
-          xml.tag({title: heading}, content )
+        entries.each do |heading, value|
+          content, klass = value
+          xml.tag({title: heading, class: klass}, content )
         end
       end
     end
@@ -573,12 +574,19 @@ EOF
           
           xml.h2({class: 'anchor', id: char.downcase}, char)
           
-          rows.each do |heading, inner_html|
+          rows.each do |heading, value|
+            
+            puts 'value: ' + value.inspect if @debug
+            inner_html, attrclass = value
+            
             puts 'inner_html: ' + inner_html.inspect if debug
             xml.a({class: 'anchor', name: heading.downcase.gsub(/\W/,'-')\
                    .gsub(/-{2,}/,'-').gsub(/^-|-$/,'')})
             xml.button({class:'accordion'}, heading.to_s)
-            xml.div({class:'panel'}, inner_html)
+            
+            s = 'panel'
+            s += ' ' + attrclass if attrclass
+            xml.div({class: s}, inner_html)
             
           end
         end
