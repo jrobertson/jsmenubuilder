@@ -206,6 +206,29 @@ h2.anchor {
 
 EOF
 
+VERTICAL_MENU_CSS =<<EOF
+.vertical-menu {
+  width: 200px; /* Set a width if you like */
+}
+
+.vertical-menu a {
+  background-color: #eee; /* Grey background color */
+  color: black; /* Black text color */
+  display: block; /* Make the links appear below each other */
+  padding: 12px; /* Add some padding */
+  text-decoration: none; /* Remove underline from links */
+}
+
+.vertical-menu a:hover {
+  background-color: #ccc; /* Dark grey background on mouse-over */
+}
+
+.vertical-menu a.active {
+  background-color: #4CAF50; /* Add a green color to the "active/current" link */
+  color: white;
+}
+EOF
+
 FULL_PAGE_TABS_JS =<<EOF
 function openPage(pageName,elmnt) {
   var i, tabcontent;
@@ -280,6 +303,10 @@ function myFunction() {
 }
 EOF
 
+VERTICAL_MENU_JS = ''
+
+
+
   attr_reader :html, :css, :js
 
   def initialize(unknown=nil, options={})
@@ -304,7 +331,7 @@ EOF
       options = unknown
     end    
 
-    @types = %i(tabs full_page_tabs accordion sticky_navbar)
+    @types = %i(tabs full_page_tabs accordion sticky_navbar vertical_menu)
     
     build(type, options) if type
 
@@ -632,6 +659,40 @@ EOF
     return doc
 
     
-  end  
+  end
+
+  def vertical_menu(opt={})
+
+    puts 'inside vertical_navbar' if @debug
+    
+    navhtml = if opt[:html] then
+    
+      opt[:html]
+      
+    elsif opt[:items]
+      
+      RexleBuilder.build do |xml|
+        
+        xml.html do
+          
+          xml.div(class: 'vertical-menu') do
+            
+            opt[:items].each do |title, href|
+              xml.a({href: href}, title)
+            end
+            
+          end
+
+        end
+      end
+    end
+    
+    doc = Rexle.new(navhtml)
+    puts 'doc: ' + doc.xml.inspect if @debug           
+
+    return doc
+
+    
+  end    
 
 end
