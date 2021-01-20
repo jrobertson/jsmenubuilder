@@ -229,6 +229,72 @@ VERTICAL_MENU_CSS =<<EOF
 }
 EOF
 
+FIXED_MENU_CSS =<<EOF
+/* The navigation bar */
+.navbar {
+  overflow: hidden;
+  background-color: #333;
+  position: fixed; /* Set the navbar to fixed position */
+  top: 0; /* Position the navbar at the top of the page */
+  width: 100%; /* Full width */
+}
+
+/* Links inside the navbar */
+.navbar a {
+  float: left;
+  display: block;
+  color: #f2f2f2;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+
+/* Change background on mouse-over */
+.navbar a:hover {
+  background: #ddd;
+  color: black;
+}
+
+/* Main content */
+.main {
+  margin-top: 30px; /* Add a top margin to avoid content overlay */
+}
+EOF
+
+BREADCRUMB_CSS =<<EOF
+/* Style the list */
+ul.breadcrumb {
+  padding: 10px 16px;
+  list-style: none;
+  background-color: #eee;
+}
+
+/* Display list items side by side */
+ul.breadcrumb li {
+  display: inline;
+  font-size: 18px;
+}
+
+/* Add a slash symbol (/) before/behind each list item */
+ul.breadcrumb li+li:before {
+  padding: 8px;
+  color: black;
+  content: "/\\00a0";
+}
+
+/* Add a color to all links inside the list */
+ul.breadcrumb li a {
+  color: #0275d8;
+  text-decoration: none;
+}
+
+/* Add a color on mouse-over */
+ul.breadcrumb li a:hover {
+  color: #01447e;
+  text-decoration: underline;
+}
+EOF
+
 FULL_PAGE_TABS_JS =<<EOF
 function openPage(pageName,elmnt) {
   var i, tabcontent;
@@ -304,7 +370,8 @@ function myFunction() {
 EOF
 
 VERTICAL_MENU_JS = ''
-
+FIXED_MENU_JS = ''
+BREADCRUMB_JS = ''
 
 
   attr_reader :html, :css, :js
@@ -331,7 +398,8 @@ VERTICAL_MENU_JS = ''
       options = unknown
     end    
 
-    @types = %i(tabs full_page_tabs accordion sticky_navbar vertical_menu)
+    @types = %i(tabs full_page_tabs accordion sticky_navbar 
+                      vertical_menu fixed_menu breadcrumb)
     
     build(type, options) if type
 
@@ -635,7 +703,7 @@ VERTICAL_MENU_JS = ''
     
       opt[:html]
       
-    elsif opt[:sticky_navbar]
+    elsif opt[:items]
       
       RexleBuilder.build do |xml|
         
@@ -643,7 +711,7 @@ VERTICAL_MENU_JS = ''
           
           xml.div(id: 'navbar') do
             
-            opt[:sticky_navbar].each do |title, href|
+            opt[:items].each do |title, href|
               xml.a({href: href}, title)
             end
             
@@ -694,5 +762,84 @@ VERTICAL_MENU_JS = ''
 
     
   end    
+  
+  def fixed_menu(opt={})
+
+    puts 'inside fixed_menu' if @debug
+    
+    navhtml = if opt[:html] then
+    
+      opt[:html]
+      
+    elsif opt[:items]
+      
+      RexleBuilder.build do |xml|
+        
+        xml.html do
+          
+          xml.div(class: 'navbar') do
+            
+            opt[:items].each do |title, href|
+              xml.a({href: href}, title)
+            end
+            
+          end
+          
+          xml.div(class: 'main') do
+            
+          end
+
+        end
+      end
+    end
+    
+    doc = Rexle.new(navhtml)
+    puts 'doc: ' + doc.xml.inspect if @debug           
+
+    return doc
+
+    
+  end  
+  
+  def breadcrumb(opt={})
+
+    puts 'inside breadcrumb' if @debug
+    
+    navhtml = if opt[:html] then
+    
+      opt[:html]
+      
+    elsif opt[:items]
+      
+      RexleBuilder.build do |xml|
+        
+        xml.html do
+          
+          xml.ul(class: 'breadcrumb') do
+            
+            opt[:items][0..-2].each do |title, href|
+              xml.li do
+                xml.a({href: href}, title)
+              end
+            end
+            
+            title = opt[:items][-1].first
+            xml.li title
+            
+          end
+          
+
+
+        end
+      end
+    end
+    
+    doc = Rexle.new(navhtml)
+    puts 'doc: ' + doc.xml.inspect if @debug           
+
+    return doc
+
+    
+  end   
 
 end
